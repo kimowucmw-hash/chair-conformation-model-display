@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>環己烷構象實驗室 · Cyclohexane Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--bg0:#0b0d12;--bg1:#13161f;--ink:#eceae3;--muted:#8d8f9a;--accent:#e0a458;--accent2:#5fb6a8;--red:#e0726a;--line:#272b36;--panel:rgba(16,19,27,.86)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:"JetBrains Mono",monospace;background:radial-gradient(120% 120% at 70% 8%,#1a1e2a 0%,var(--bg1) 42%,var(--bg0) 100%);color:var(--ink);overflow:hidden}
+  #scene{position:fixed;inset:0;touch-action:none;display:block;z-index:1}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.28;z-index:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(120% 100% at 50% 42%,#000 28%,transparent 80%)}
+  .hud{position:fixed;pointer-events:none;z-index:4}
+  .title{top:18px;left:20px}
+  .title h1{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:clamp(18px,3vw,32px);line-height:.95;letter-spacing:-.02em}
+  .title h1 .en{display:block;font-size:.42em;letter-spacing:.26em;color:var(--accent);margin-top:.5em;font-weight:500}
+  .stage{top:20px;right:20px;text-align:right;max-width:48vw}
+  .stage .lab{font-size:10px;letter-spacing:.24em;color:var(--muted)}
+  .stage .val{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:clamp(16px,2.6vw,22px);color:var(--accent2);line-height:1.15}
+  .stage .sub{font-size:11px;color:var(--muted);margin-top:3px}
+  /* info cards */
+  .card{position:fixed;z-index:4;background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:12px;padding:8px 10px 6px}
+  #energyCard{left:14px;top:84px}
+  #newmanCard{right:14px;top:120px;display:none}
+  #avalCard{left:14px;bottom:230px;display:none;font-size:11px;line-height:1.55;max-width:210px}
+  .card h3{font-size:9.5px;letter-spacing:.18em;color:var(--muted);font-weight:500;margin-bottom:4px}
+  .avrow{display:flex;justify-content:space-between;gap:10px}
+  .avrow b{color:var(--accent)}
+  canvas.mini{display:block}
+  /* control panel */
+  .panel{pointer-events:auto;position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:5;width:min(680px,calc(100% - 20px));background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:16px;padding:11px 13px;box-shadow:0 18px 50px rgba(0,0,0,.55);max-height:46vh;overflow-y:auto}
+  .row{display:flex;align-items:center;gap:9px}
+  .row+.row{margin-top:8px}
+  .glab{font-size:9.5px;letter-spacing:.14em;color:var(--muted);white-space:nowrap;min-width:52px}
+  input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:4px;border-radius:4px;background:linear-gradient(90deg,var(--accent) var(--p,0%),#2c303c var(--p,0%));outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--ink);border:2px solid var(--accent)}
+  input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--ink);border:2px solid var(--accent)}
+  .pct{font-size:11px;color:var(--accent);width:38px;text-align:right}
+  .btns{display:flex;flex-wrap:wrap;gap:6px;flex:1}
+  button{font-family:inherit;font-size:11.5px;letter-spacing:.02em;color:var(--ink);background:#1b1f2a;border:1px solid var(--line);border-radius:9px;padding:8px 11px;transition:.15s;white-space:nowrap}
+  button:active{transform:scale(.96)}
+  button.primary{background:var(--accent);color:#15110a;border-color:var(--accent);font-weight:500}
+  button.sel{border-color:var(--accent);color:var(--accent);background:#241d10}
+  button.on{border-color:var(--accent2);color:var(--accent2)}
+  .seg{display:flex;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{border:none;border-radius:0;border-right:1px solid var(--line);padding:8px 10px}
+  .seg button:last-child{border-right:none}
+  .hint{position:fixed;left:20px;bottom:6px;font-size:9.5px;color:var(--muted);letter-spacing:.06em;pointer-events:none;z-index:4}
+  @media(max-width:600px){.hint{display:none}.title{left:14px;top:12px}.stage{top:14px;right:14px}#energyCard{top:70px;left:10px}}
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div class="hud title"><h1>環己烷構象<span class="en">CYCLOHEXANE&nbsp;CONFORMATION&nbsp;LAB</span></h1></div>
+<div class="hud stage"><div class="lab">構象 / CONFORMER</div><div class="val" id="stateLabel">椅式 Chair</div><div class="sub" id="subLabel"></div></div>
+
+<div class="card" id="energyCard"><h3>能量座標 ΔE (kJ/mol)</h3><canvas id="energy" class="mini"></canvas></div>
+<div class="card" id="newmanCard"><h3>NEWMAN · C1→C2</h3><canvas id="newman" class="mini"></canvas></div>
+<div class="card" id="avalCard"><h3>取代基平衡 (298K)</h3><div id="avalBody"></div></div>
+
+<div class="panel">
+  <div class="row"><span class="glab">摺疊 FOLD</span><input id="fold" type="range" min="0" max="1000" value="0"><span class="pct" id="pct">0%</span></div>
+  <div class="row"><span class="glab">動作</span><div class="btns">
+    <button class="primary" id="play">▶ 播放摺疊</button>
+    <button id="flip">↺ 環翻轉</button>
+    <button id="reset">重設視角</button>
+  </div></div>
+  <div class="row"><span class="glab">取代基 R1</span><div class="seg" id="r1seg">
+    <button data-t="H" class="sel">H</button><button data-t="CH3">CH₃</button><button data-t="OH">OH</button><button data-t="tBu">tBu</button>
+  </div></div>
+  <div class="row"><span class="glab">第二基 R2</span><div class="seg" id="r2seg">
+    <button data-p="0" class="sel">無</button><button data-p="1">1,2</button><button data-p="2">1,3</button><button data-p="3">1,4</button>
+  </div>
+  <button id="cistrans">cis</button></div>
+  <div class="row"><span class="glab">系統</span><div class="seg" id="sysSeg"><button data-m="mono" class="sel">單環</button><button data-m="deca">雙環 decalin</button></div><button id="fusion">trans 稠合</button></div>
+  <div class="row"><span class="glab">顯示</span><div class="btns">
+    <button id="hyd">氫原子</button>
+    <button id="axeq">ax/eq 上色</button>
+    <button id="diax">1,3-diaxial</button>
+    <button id="num">編號</button>
+    <button id="newmanBtn">Newman</button>
+    <button id="spin">自動旋轉</button>
+  </div></div>
+</div>
+<div class="hint">拖曳旋轉 · 雙指 / 滾輪縮放</div>
+
+<script>
+const cv=document.getElementById('scene'),ctx=cv.getContext('2d');
+let W=0,H=0,DPR=1;
+function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener('resize',resize);resize();
+
+// ---------- vector helpers ----------
+const sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y,z:a.z-b.z}),add=(a,b)=>({x:a.x+b.x,y:a.y+b.y,z:a.z+b.z});
+const mul=(a,s)=>({x:a.x*s,y:a.y*s,z:a.z*s}),dot=(a,b)=>a.x*b.x+a.y*b.y+a.z*b.z;
+const len=a=>Math.hypot(a.x,a.y,a.z),norm=a=>{const l=len(a)||1;return{x:a.x/l,y:a.y/l,z:a.z/l}};
+const cross=(a,b)=>({x:a.y*b.z-a.z*b.y,y:a.z*b.x-a.x*b.z,z:a.x*b.y-a.y*b.x});
+
+// ---------- conformer geometry (Cremer-Pople puckering) ----------
+const R=1.5,Q0=1.18,PHI=Math.PI/6,S3=Math.sqrt(1/3),S6=1/Math.sqrt(6),CH=1.05;
+function carbonsAt(fold,theta){
+  const Q=Q0*fold,P=[];
+  for(let j=0;j<6;j++){const a=j*Math.PI/3;
+    const z=S3*(Q*Math.sin(theta))*Math.cos(PHI+2.0944*j)+S6*(Q*Math.cos(theta))*((j%2)?-1:1);
+    P.push({x:R*Math.cos(a),y:z,z:R*Math.sin(a)});}
+  return P;
+}
+function hDirs(C,i){const P=C[i],b1=norm(sub(C[(i+5)%6],P)),b2=norm(sub(C[(i+1)%6],P));
+  const S=norm(add(b1,b2)),N=norm(cross(b1,b2));
+  return [add(mul(S,-0.5774),mul(N,0.8165)),add(mul(S,-0.5774),mul(N,-0.8165))];}
+// three tetrahedral dirs given the "back" bond (toward parent atom)
+function tetra3(back){let p=cross(back,{x:0,y:1,z:0});if(len(p)<1e-3)p=cross(back,{x:1,y:0,z:0});
+  p=norm(p);const q=norm(cross(back,p)),out=[];
+  for(let k=0;k<3;k++){const a=k*2.0944;out.push(norm(add(mul(back,-1/3),mul(add(mul(p,Math.cos(a)),mul(q,Math.sin(a))),0.9428))));}
+  return out;}
+
+// ---------- bicyclic: decalin (two fused chairs) ----------
+function frameB(p,s){const e1=norm(p);let e2=norm(sub(s,mul(e1,dot(s,e1))));return[e1,e2,cross(e1,e2)];}
+function applyR(E,F,v){return add(add(mul(F[0],dot(E[0],v)),mul(F[1],dot(E[1],v))),mul(F[2],dot(E[2],v)));}
+function hDirs2(P,n1,n2){const b1=norm(sub(n1,P)),b2=norm(sub(n2,P)),S=norm(add(b1,b2)),N=norm(cross(b1,b2));
+  return[add(mul(S,-0.5774),mul(N,0.8165)),add(mul(S,-0.5774),mul(N,-0.8165))];}
+function bridgeHdir(P,nb){let s={x:0,y:0,z:0};for(const q of nb)s=add(s,norm(sub(q,P)));return mul(norm(s),-1);}
+function decalin(kind,th){const A=carbonsAt(1,th),slot=kind==='trans'?1:0,mir=kind==='trans';
+  let c=carbonsAt(1,th); if(mir)c=c.map(p=>({x:p.x,y:p.y,z:-p.z}));
+  const E=frameB(sub(c[1],c[0]),sub(c[5],c[0])),F=frameB(sub(A[1],A[0]),hDirs(A,0)[slot]),ring=[];
+  for(let j=0;j<6;j++)ring.push(add(A[0],applyR(E,F,sub(c[j],c[0]))));
+  return {A,newC:[ring[2],ring[3],ring[4],ring[5]]};   // shared edge A0-A1; 4 new carbons
+}
+function drawDecalin(){
+  const {A,newC:N}=decalin(fusion,decaTheta),items=[];
+  // ring-A bonds (fusion bond A0-A1 highlighted)
+  for(const[a,b] of ccPairs){const fus=(a===0&&b===1);items.push({type:'bond',w:fus?0.2:0.16,col:fus?'#e0a458':'#6a6e7a',a:project(A[a]),b:project(A[b])});}
+  // ring-B bonds: A1-N0, N0-N1, N1-N2, N2-N3, N3-A0
+  const bp=[[A[1],N[0]],[N[0],N[1]],[N[1],N[2]],[N[2],N[3]],[N[3],A[0]]];
+  for(const[a,b] of bp)items.push({type:'bond',w:0.16,col:'#6a6e7a',a:project(a),b:project(b)});
+  // optional ring H's
+  if(showH){
+    for(let i=2;i<=5;i++)for(const dd of hDirs(A,i)){const h=add(A[i],mul(dd,CH));items.push({type:'bond',w:0.06,col:'#474a54',a:project(A[i]),b:project(h)});items.push({type:'atom',c:COL.H,r:0.2,p:project(h)});}
+    const nb=[[A[1],N[1]],[N[0],N[2]],[N[1],N[3]],[N[2],A[0]]];
+    for(let k=0;k<4;k++)for(const dd of hDirs2(N[k],nb[k][0],nb[k][1])){const h=add(N[k],mul(dd,CH));items.push({type:'bond',w:0.06,col:'#474a54',a:project(N[k]),b:project(h)});items.push({type:'atom',c:COL.H,r:0.2,p:project(h)});}
+  }
+  // bridgehead H's (always shown, teal = the atoms that define cis/trans)
+  const H0=bridgeHdir(A[0],[A[1],A[5],N[3]]),H1=bridgeHdir(A[1],[A[0],A[2],N[0]]);
+  for(const[P,Hd] of [[A[0],H0],[A[1],H1]]){const h=add(P,mul(Hd,CH));items.push({type:'bond',w:0.08,col:'#5fb6a8',a:project(P),b:project(h)});items.push({type:'atom',c:['#9fe0d4','#2f7a6e'],r:0.23,p:project(h)});}
+  // carbons (bridgeheads amber)
+  for(let i=0;i<6;i++)items.push({type:'atom',c:i<2?COL.subC:COL.ringC,r:0.42,p:project(A[i]),label:num?(i+1):null});
+  for(let k=0;k<4;k++)items.push({type:'atom',c:COL.ringC,r:0.42,p:project(N[k]),label:num?(7+k):null});
+  renderItems(items);
+}
+
+// ---------- substituent groups ----------
+const COL={ringC:['#9aa0b0','#33353f'],subC:['#f3c578','#9c6f2e'],O:['#ef8f86','#7e2f29'],H:['#ffffff','#b7b5ac']};
+function buildGroup(C,idx,slot,type,showH){
+  const P=C[idx],dir=hDirs(C,idx)[slot],atoms=[],bonds=[];
+  if(type==='H'){const Hp=add(P,mul(dir,CH));atoms.push({p:Hp,c:COL.H,r:0.22});bonds.push({a:P,b:Hp,w:0.065,col:'#474a54'});return{atoms,bonds,dir,anchor:Hp};}
+  if(type==='CH3'){const Cm=add(P,mul(dir,1.52));atoms.push({p:Cm,c:COL.subC,r:0.40});bonds.push({a:P,b:Cm,w:0.16,col:'#a87f3c'});
+    for(const d of tetra3(norm(sub(P,Cm)))){const h=add(Cm,mul(d,CH));atoms.push({p:h,c:COL.H,r:0.19});bonds.push({a:Cm,b:h,w:0.055,col:'#6e5c38'});}
+    return{atoms,bonds,dir,anchor:Cm};}
+  if(type==='OH'){const O=add(P,mul(dir,1.43));atoms.push({p:O,c:COL.O,r:0.32});bonds.push({a:P,b:O,w:0.16,col:'#9b4f48'});
+    const h=add(O,mul(tetra3(norm(sub(P,O)))[0],0.97));atoms.push({p:h,c:COL.H,r:0.17});bonds.push({a:O,b:h,w:0.05,col:'#7e4a44'});
+    return{atoms,bonds,dir,anchor:O};}
+  if(type==='tBu'){const Cc=add(P,mul(dir,1.54));atoms.push({p:Cc,c:COL.subC,r:0.40});bonds.push({a:P,b:Cc,w:0.16,col:'#a87f3c'});
+    for(const d of tetra3(norm(sub(P,Cc)))){const Cm=add(Cc,mul(d,1.53));atoms.push({p:Cm,c:COL.subC,r:0.34});bonds.push({a:Cc,b:Cm,w:0.13,col:'#a87f3c'});
+      if(showH)for(const dd of tetra3(norm(sub(Cc,Cm)))){const h=add(Cm,mul(dd,CH));atoms.push({p:h,c:COL.H,r:0.16});bonds.push({a:Cm,b:h,w:0.045,col:'#6e5c38'});}}
+    return{atoms,bonds,dir,anchor:Cc};}
+}
+
+// ---------- camera / projection ----------
+let rotX=-0.5,rotY=0.62,zoom=1,dRX=-0.5,dRY=0.62,dZoom=1,spin=false;
+function project(p){
+  const cy=Math.cos(dRY),sy=Math.sin(dRY);let x=p.x*cy+p.z*sy,z=-p.x*sy+p.z*cy,y=p.y;
+  const cx=Math.cos(dRX),sx=Math.sin(dRX);let y2=y*cx-z*sx,z2=y*sx+z*cx;
+  const scale=Math.min(W,H)*0.155*dZoom,persp=6/(6-z2);
+  return{sx:W/2+x*scale*persp,sy:H/2-y2*scale*persp,z:z2,r:scale*persp};
+}
+const ccPairs=[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0]];
+
+// ---------- state ----------
+let fold=0,theta=0,playing=false,playT=0;
+let showH=false,axeq=false,diax=false,num=false;
+let mode='mono',fusion='trans';
+let decaTheta=0,decaFlipping=false,decaStart=0,decaFrom=0,decaTo=Math.PI,transNote=-9999;
+let R1='H',R2sep=0,cis=true,slot1=0,slot2=0,face1=1;
+let flipping=false,flipStart=0,fromTheta=0,toTheta=Math.PI;
+const easeIO=x=>x<0.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const Efn=th=>{const u=th/Math.PI;return 23*Math.sin(Math.PI*u)**2+33.5*Math.sin(2*Math.PI*u)**2;};
+
+// choose slot index for a desired face (+1 top / -1 bottom) at the reference chair
+function slotForFace(idx,face){const d=hDirs(carbonsAt(1,0),idx);return (Math.sign(d[0].y)===face)?0:1;}
+function syncSubs(){
+  slot1=slotForFace(0,face1);
+  if(R2sep) slot2=slotForFace(R2sep,cis?face1:-face1);
+}
+function axiality(dir){return Math.abs(dir.y)>0.5?'axial':'equatorial';}
+
+// ---------- main draw ----------
+function draw(){
+  const C=carbonsAt(fold,theta), items=[];
+  const chairish=Math.abs(Math.cos(theta))>0.9 && fold>0.9;
+
+  // ax/eq bond colouring (the C-H / C-R direction lines) -> just colour ring-bond? colour the slot bonds
+  for(const[a,b]of ccPairs)items.push({type:'bond',w:0.16,col:'#6a6e7a',a:project(C[a]),b:project(C[b])});
+
+  // ring hydrogens
+  const subAtoms=new Set([0]); if(R2sep)subAtoms.add(R2sep);
+  if(showH){
+    for(let i=0;i<6;i++){const dirs=hDirs(C,i);
+      for(let s=0;s<2;s++){
+        if(subAtoms.has(i) && ((i===0&&s===slot1)||(R2sep>0&&i===R2sep&&s===slot2)))continue; // replaced by group
+        const Hp=add(C[i],mul(dirs[s],CH)),col=axeq?(Math.abs(dirs[s].y)>0.5?'#c98a86':'#6f9b94'):'#474a54';
+        items.push({type:'bond',w:0.065,col,a:project(C[i]),b:project(Hp)});
+        items.push({type:'atom',c:COL.H,r:0.22,p:project(Hp)});
+      }}
+  } else if(axeq){ // show only ax/eq coloured stubs without all H spheres
+    for(let i=0;i<6;i++){const dirs=hDirs(C,i);for(let s=0;s<2;s++){
+      const Hp=add(C[i],mul(dirs[s],CH*0.9)),col=Math.abs(dirs[s].y)>0.5?'#c98a86':'#6f9b94';
+      items.push({type:'bond',w:0.07,col,a:project(C[i]),b:project(Hp)});}}
+  }
+
+  // substituent groups
+  const groups=[];
+  const g1=buildGroup(C,0,slot1,R1,showH); groups.push({g:g1,idx:0});
+  if(R2sep){const g2=buildGroup(C,R2sep,slot2,R1,showH);groups.push({g:g2,idx:R2sep});}
+  for(const{g} of groups){
+    for(const b of g.bonds)items.push({type:'bond',w:b.w,col:b.col,a:project(b.a),b:project(b.b)});
+    for(const at of g.atoms)items.push({type:'atom',c:at.c,r:at.r,p:project(at.p)});
+  }
+
+  // 1,3-diaxial highlight: when a group sits axial, mark clashing axial H on i±2 same face
+  if(diax && chairish){
+    for(const{g,idx} of groups){ if(R1==='H')break;
+      if(Math.abs(g.dir.y)>0.5){const sgn=Math.sign(g.dir.y);
+        for(const c of [(idx+2)%6,(idx+4)%6]){const ds=hDirs(C,c);
+          const s=(Math.sign(ds[0].y)===sgn&&Math.abs(ds[0].y)>0.5)?0:1;
+          const Hp=add(C[c],mul(ds[s],CH));
+          items.push({type:'atom',c:['#ff8a7a','#a83327'],r:0.26,p:project(Hp)});
+          items.push({type:'dash',a:project(g.anchor),b:project(Hp)});
+        }}
+    }
+  }
+
+  // ring carbons + number labels
+  for(let i=0;i<6;i++)items.push({type:'atom',c:COL.ringC,r:0.42,p:project(C[i]),label:num?(i+1):null});
+
+  items.sort((m,n)=>{const dm=m.type==='bond'||m.type==='dash'?(m.a.z+m.b.z)/2:m.p.z;const dn=n.type==='bond'||n.type==='dash'?(n.a.z+n.b.z)/2:n.p.z;return dm-dn;});
+  renderItems(items);
+}
+function renderItems(items){
+  items.sort((m,n)=>{const dm=m.type==='bond'||m.type==='dash'?(m.a.z+m.b.z)/2:m.p.z;const dn=n.type==='bond'||n.type==='dash'?(n.a.z+n.b.z)/2:n.p.z;return dm-dn;});
+  ctx.clearRect(0,0,W,H);
+  const base=Math.min(W,H)*0.155*dZoom;
+  for(const it of items){
+    if(it.type==='bond'){ctx.lineCap='round';ctx.strokeStyle=it.col;ctx.lineWidth=Math.max(2,it.w*base);ctx.beginPath();ctx.moveTo(it.a.sx,it.a.sy);ctx.lineTo(it.b.sx,it.b.sy);ctx.stroke();}
+    else if(it.type==='dash'){ctx.save();ctx.setLineDash([4,5]);ctx.strokeStyle='rgba(255,120,100,.8)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(it.a.sx,it.a.sy);ctx.lineTo(it.b.sx,it.b.sy);ctx.stroke();ctx.restore();}
+    else{const r=it.r*it.p.r,sx=it.p.sx,sy=it.p.sy;
+      const g=ctx.createRadialGradient(sx-r*0.35,sy-r*0.4,r*0.1,sx,sy,r);
+      g.addColorStop(0,it.c[0]);g.addColorStop(1,it.c[1]);
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(sx,sy,r,0,7);ctx.fill();
+      ctx.lineWidth=1.2;ctx.strokeStyle='rgba(0,0,0,.45)';ctx.stroke();
+      if(it.label){ctx.fillStyle='#0c0e13';ctx.font='600 '+(r*0.95)+'px JetBrains Mono';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(it.label,sx,sy);}
+    }
+  }
+}
+
+// ---------- energy inset ----------
+const eC=document.getElementById('energy'),eCtx=eC.getContext('2d');
+function sizeMini(c){const w=140,h=92;c.width=w*DPR;c.height=h*DPR;c.style.width=w+'px';c.style.height=h+'px';c.getContext('2d').setTransform(DPR,0,0,DPR,0,0);return{w,h};}
+let eDim=sizeMini(eC);
+function drawEnergy(){
+  const {w,h}=eDim,m=14,pw=w-m*2,ph=h-m-8;eCtx.clearRect(0,0,w,h);
+  const Emax=46;
+  eCtx.strokeStyle='#2c303c';eCtx.lineWidth=1;eCtx.beginPath();eCtx.moveTo(m,8);eCtx.lineTo(m,8+ph);eCtx.lineTo(m+pw,8+ph);eCtx.stroke();
+  eCtx.strokeStyle=COL.subC[0];eCtx.lineWidth=2;eCtx.beginPath();
+  for(let i=0;i<=80;i++){const u=i/80,x=m+u*pw,y=8+ph-(Efn(u*Math.PI)/Emax)*ph;i?eCtx.lineTo(x,y):eCtx.moveTo(x,y);}
+  eCtx.stroke();
+  // landmark dots
+  const marks=[[0,'C'],[0.25,''],[0.5,'TB'],[0.75,''],[1,"C'"]];
+  eCtx.fillStyle='#5b606e';for(const[u]of marks){const x=m+u*pw,y=8+ph-(Efn(u*Math.PI)/Emax)*ph;eCtx.beginPath();eCtx.arc(x,y,2,0,7);eCtx.fill();}
+  // moving ball
+  const u=theta/Math.PI,bx=m+u*pw,by=8+ph-(Efn(theta)/Emax)*ph;
+  eCtx.fillStyle=COL.accent2||'#5fb6a8';eCtx.fillStyle='#5fb6a8';eCtx.beginPath();eCtx.arc(bx,by,4,0,7);eCtx.fill();
+  eCtx.fillStyle='#8d8f9a';eCtx.font='8px JetBrains Mono';eCtx.textAlign='center';
+  eCtx.fillText('chair',m+2,h-1);eCtx.fillText('TB',m+pw*0.5,h-1);eCtx.fillText('chair',m+pw,h-1);
+  eCtx.fillStyle='#e0a458';eCtx.textAlign='left';eCtx.fillText('ΔE='+Efn(theta).toFixed(0),m,6);
+}
+
+// ---------- Newman inset ----------
+const nC=document.getElementById('newman'),nCtx=nC.getContext('2d');let nDim=sizeMini(nC);
+function drawNewman(C){
+  const {w,h}=nDim;nCtx.clearRect(0,0,w,h);const cx=w/2,cy=h/2,Rr=Math.min(w,h)*0.34;
+  const axis=norm(sub(C[1],C[0]));let u=cross(axis,{x:0,y:1,z:0});if(len(u)<1e-3)u=cross(axis,{x:1,y:0,z:0});u=norm(u);const v=norm(cross(axis,u));
+  const proj=d=>{const a=Math.atan2(dot(d,v),dot(d,u));return a;};
+  // front atom C0 bonds: to C5(ring) + 2 slots ; back atom C1 bonds: to C2(ring)+2 slots
+  const front=[{d:sub(C[5],C[0]),c:'#9aa0b0'},{d:hDirs(C,0)[0],c:'#d9d6cd'},{d:hDirs(C,0)[1],c:'#d9d6cd'}];
+  const back=[{d:sub(C[2],C[1]),c:'#9aa0b0'},{d:hDirs(C,1)[0],c:'#8d8f9a'},{d:hDirs(C,1)[1],c:'#8d8f9a'}];
+  nCtx.strokeStyle='#3a3e4a';nCtx.lineWidth=1.5;nCtx.beginPath();nCtx.arc(cx,cy,Rr,0,7);nCtx.stroke();
+  // back bonds (from circle outward)
+  for(const b of back){const a=proj(b.d);const x1=cx+Math.cos(a)*Rr,y1=cy+Math.sin(a)*Rr,x2=cx+Math.cos(a)*(Rr+10),y2=cy+Math.sin(a)*(Rr+10);
+    nCtx.strokeStyle=b.c;nCtx.lineWidth=2;nCtx.beginPath();nCtx.moveTo(x1,y1);nCtx.lineTo(x2,y2);nCtx.stroke();}
+  // front bonds (from center)
+  for(const f of front){const a=proj(f.d);nCtx.strokeStyle=f.c;nCtx.lineWidth=2.4;nCtx.beginPath();nCtx.moveTo(cx,cy);nCtx.lineTo(cx+Math.cos(a)*Rr,cy+Math.sin(a)*Rr);nCtx.stroke();}
+  nCtx.fillStyle='#5fb6a8';nCtx.beginPath();nCtx.arc(cx,cy,3,0,7);nCtx.fill();
+}
+
+// ---------- UI ----------
+const foldEl=document.getElementById('fold'),pctEl=document.getElementById('pct'),stateEl=document.getElementById('stateLabel'),subEl=document.getElementById('subLabel');
+const playBtn=document.getElementById('play'),flipBtn=document.getElementById('flip'),resetBtn=document.getElementById('reset');
+function confName(){if(fold<0.9)return fold<0.04?'平面 Planar':'摺疊中…';
+  const c=Math.abs(Math.cos(theta));if(c>0.9)return'椅式 Chair';if(c<0.2)return'扭船式 Twist-boat';return'半椅式 Half-chair';}
+function setFold(t){fold=t;const p=Math.round(t*100);foldEl.value=t*1000;foldEl.style.setProperty('--p',p+'%');pctEl.textContent=p+'%';}
+foldEl.addEventListener('input',e=>{playing=false;playBtn.textContent='▶ 播放摺疊';setFold(e.target.value/1000)});
+playBtn.addEventListener('click',()=>{if(fold>=1)playT=0;playing=true;playBtn.textContent='⏸ 摺疊中';});
+flipBtn.addEventListener('click',()=>{
+  if(mode==='deca'){
+    if(fusion==='trans'){transNote=performance.now();return;}
+    if(decaFlipping)return;decaFlipping=true;decaStart=performance.now();decaFrom=decaTheta;decaTo=decaTheta<0.5?Math.PI:0;return;
+  }
+  if(flipping)return;if(fold<1)setFold(1);flipping=true;flipStart=performance.now();fromTheta=theta;toTheta=(Math.abs(theta)<0.5)?Math.PI:0;});
+resetBtn.addEventListener('click',()=>{rotX=-0.5;rotY=0.62;zoom=1;});
+
+function pick(seg,attr,cb){[...seg.children].forEach(b=>b.addEventListener('click',()=>{[...seg.children].forEach(x=>x.classList.remove('sel'));b.classList.add('sel');cb(b.getAttribute(attr));}));}
+pick(document.getElementById('r1seg'),'data-t',v=>{R1=v;updateAval();});
+pick(document.getElementById('r2seg'),'data-p',v=>{R2sep=+v;syncSubs();updateAval();});
+const ctBtn=document.getElementById('cistrans');
+ctBtn.addEventListener('click',()=>{cis=!cis;ctBtn.textContent=cis?'cis':'trans';syncSubs();});
+function tog(id,set){const b=document.getElementById(id);b.addEventListener('click',()=>{const v=set();b.classList.toggle('on',v);});return b;}
+tog('hyd',()=>showH=!showH);
+tog('axeq',()=>axeq=!axeq);
+tog('diax',()=>diax=!diax);
+tog('num',()=>num=!num);
+const nmCard=document.getElementById('newmanCard');
+tog('newmanBtn',()=>{const v=!(nmCard.style.display==='block');nmCard.style.display=v?'block':'none';return v;});
+tog('spin',()=>spin=!spin);
+const eCard=document.getElementById('energyCard');
+pick(document.getElementById('sysSeg'),'data-m',v=>{mode=v;});
+const fusionBtn=document.getElementById('fusion');
+fusionBtn.addEventListener('click',()=>{fusion=fusion==='trans'?'cis':'trans';fusionBtn.textContent=fusion+' 稠合';});
+
+const avCard=document.getElementById('avalCard'),avBody=document.getElementById('avalBody');
+const AV={H:0,CH3:7.3,OH:4.2,tBu:20};const RT=2.478;
+function updateAval(){
+  if(R1==='H'){avCard.style.display='none';return;}
+  avCard.style.display='block';const A=AV[R1],K=Math.exp(A/RT),eq=100*K/(1+K);
+  avBody.innerHTML=`<div class="avrow"><span>基團</span><b>${R1}</b></div><div class="avrow"><span>A 值</span><b>${A} kJ/mol</b></div>`+
+    `<div class="avrow"><span>equatorial</span><b>${eq.toFixed(1)}%</b></div><div class="avrow"><span>axial</span><b>${(100-eq).toFixed(1)}%</b></div>`+
+    (R2sep?`<div class="avrow" style="margin-top:4px;color:#8d8f9a"><span>關係</span><b style="color:#5fb6a8">${cis?'cis':'trans'}-1,${R2sep+1}</b></div>`:'');
+}
+
+// ---------- pointer ----------
+const pts=new Map();let pinch0=0,zoom0=1;
+cv.addEventListener('pointerdown',e=>{pts.set(e.pointerId,{x:e.clientX,y:e.clientY});cv.setPointerCapture(e.pointerId);if(pts.size===2){const a=[...pts.values()];pinch0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);zoom0=zoom;}});
+cv.addEventListener('pointermove',e=>{const o=pts.get(e.pointerId);if(!o)return;if(pts.size===1){rotY+=(e.clientX-o.x)*0.008;rotX=Math.max(-1.4,Math.min(1.4,rotX+(e.clientY-o.y)*0.008));}o.x=e.clientX;o.y=e.clientY;if(pts.size===2){const a=[...pts.values()];const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(pinch0)zoom=Math.max(0.5,Math.min(3,zoom0*d/pinch0));}});
+function up(e){pts.delete(e.pointerId);}cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(0.5,Math.min(3,zoom-e.deltaY*0.0012));},{passive:false});
+
+// ---------- loop ----------
+let last=performance.now();
+function loop(now){const dt=(now-last)/1000;last=now;
+  if(spin)rotY+=dt*0.5;
+  dRX+=(rotX-dRX)*0.15;dRY+=(rotY-dRY)*0.15;dZoom+=(zoom-dZoom)*0.15;
+  if(playing){playT=Math.min(1,playT+dt/2.2);setFold(easeIO(playT));if(playT>=1){playing=false;playBtn.textContent='▶ 重新播放';}}
+  if(flipping){const k=Math.min(1,(now-flipStart)/1600);theta=fromTheta+(toTheta-fromTheta)*easeIO(k);if(k>=1){flipping=false;theta=toTheta;}}
+  if(mode==='deca'){
+    if(fusion==='trans'){decaTheta=0;decaFlipping=false;}
+    else if(decaFlipping){const k=Math.min(1,(now-decaStart)/1700);decaTheta=decaFrom+(decaTo-decaFrom)*easeIO(k);if(k>=1){decaFlipping=false;decaTheta=decaTo;}}
+    drawDecalin(); eCard.style.display='none';
+    if(fusion==='trans'){stateEl.textContent='trans-十氫萘 (剛性, 不可翻環)';
+      subEl.textContent=(now-transNote<1900)?'trans-decalin 剛性：翻環會迫使稠合鍵變成雙軸向，不可能':'兩椅式環稠合 · 橋頭 H 反式(異面)';}
+    else{const c=Math.abs(Math.cos(decaTheta));
+      stateEl.textContent=decaFlipping?'cis-十氫萘 · 翻環中…':'cis-十氫萘 (可翻環)';
+      subEl.textContent=decaFlipping?(c<0.3?'雙環同時經 twist-boat':'兩椅式環一起翻'):'兩椅式環稠合 · 橋頭 H 順式(同面) · 可按環翻轉';}
+    requestAnimationFrame(loop);return;
+  }
+  const C=carbonsAt(fold,theta);
+  draw();drawEnergy();eCard.style.display='block';if(nmCard.style.display==='block')drawNewman(C);
+  // labels
+  stateEl.textContent=confName();
+  let s='';
+  if(R1!=='H'&&fold>0.9){const g=buildGroup(C,0,slot1,R1,false);s='R1 '+R1+' · '+(Math.abs(g.dir.y)>0.5?'直立 axial':'平伏 equatorial');
+    if(R2sep){const g2=buildGroup(C,R2sep,slot2,R1,false);s+='　R2 · '+(Math.abs(g2.dir.y)>0.5?'ax':'eq')+' ('+(cis?'cis':'trans')+')';}}
+  subEl.textContent=s;
+  requestAnimationFrame(loop);
+}
+syncSubs();updateAval();setFold(0);requestAnimationFrame(loop);
+</script>
+</body>
+</html>
